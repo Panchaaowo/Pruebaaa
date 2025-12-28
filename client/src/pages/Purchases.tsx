@@ -1,7 +1,7 @@
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { FileSpreadsheet, Upload, Plus } from "lucide-react";
+import { FileSpreadsheet, Plus, Search } from "lucide-react";
 import { usePurchases, useCreatePurchase } from "@/hooks/use-purchases";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { useProducts } from "@/hooks/use-products";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function Purchases() {
   const { data: purchases, isLoading } = usePurchases();
@@ -70,6 +69,7 @@ export default function Purchases() {
 
 function CreatePurchaseDialog() {
   const [open, setOpen] = useState(false);
+  const [productSearch, setProductSearch] = useState("");
   const { mutate: createPurchase, isPending } = useCreatePurchase();
   const { data: products } = useProducts();
   const { toast } = useToast();
@@ -85,12 +85,21 @@ function CreatePurchaseDialog() {
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
-    name: "items" as any, // casting due to complex json type in schema
+    name: "items" as any,
   });
 
   // Calculate total automatically
   const watchItems = form.watch("items");
   const calculatedTotal = (watchItems as any[]).reduce((sum, item) => sum + (item.cost * item.quantity), 0);
+
+  // Filtrar productos por búsqueda
+  const filteredProducts = products?.filter(p => 
+    productSearch === "" ||
+    (p.partNumber?.toLowerCase().includes(productSearch.toLowerCase())) ||
+    (p.nombre?.toLowerCase().includes(productSearch.toLowerCase())) ||
+    (p.compatibleBrand?.toLowerCase().includes(productSearch.toLowerCase())) ||
+    (p.compatibleModel?.toLowerCase().includes(productSearch.toLowerCase()))
+  );
 
   const onSubmit = (data: InsertPurchase) => {
     // Ensure total matches calculated
@@ -154,24 +163,36 @@ function CreatePurchaseDialog() {
                 <div key={field.id} className="flex gap-3 items-end p-4 bg-slate-50 rounded-lg border border-slate-100">
                   <div className="flex-1">
                     <FormLabel className="text-xs">Producto</FormLabel>
-                    <Select 
-                      onValueChange={(val) => {
-                        const product = products?.find(p => p.id.toString() === val);
-                        form.setValue(`items.${index}.productId` as any, parseInt(val));
-                        // Auto-fill cost if we had it (simulated)
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar producto" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {products?.map(p => (
-                          <SelectItem key={p.id} value={p.id.toString()}>
-                            {p.partNumber} - {p.compatibleBrand} {p.compatibleModel}
-                          </SelectItem>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input 
+                        placeholder="Buscar por código, marca o modelo..."
+                        className="pl-9"
+                        value={productSearch}
+                        onChange={(e) => setProductSearch(e.target.value)}
+                      />
+                    </div>
+                    {productSearch && filteredProducts && filteredProducts.length > 0 && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        {filteredProducts.map(product => (
+                          <button
+                            key={product.id}
+                            type="button"
+                            className="w-full px-3 py-2 text-left hover:bg-slate-50 border-b last:border-b-0"
+                            onClick={() => {
+                              form.setValue(`items.${index}.productId` as any, product.id);
+                              setProductSearch(`${product.partNumber} - ${product.nombre}`);
+                            }}
+                          >
+                            <div className="font-medium text-sm">{product.partNumber}</div>
+                            <div className="text-xs text-slate-500">{product.nombre}</div>
+                            <div className="text-xs text-slate-400">
+                              {product.compatibleBrand} {product.compatibleModel}
+                            </div>
+                          </button>
                         ))}
-                      </SelectContent>
-                    </Select>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="w-24">
@@ -194,8 +215,14 @@ function CreatePurchaseDialog() {
                     />
                   </div>
 
-                  <Button type="button" variant="ghost" size="icon" className="text-red-500" onClick={() => remove(index)}>
-                    <Upload className="w-4 h-4 rotate-45" /> {/* Using upload as cross for delete */}
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="icon" 
+                    className="text-red-500 hover:bg-red-50" 
+                    onClick={() => remove(index)}
+                  >
+                    ✕
                   </Button>
                 </div>
               ))}

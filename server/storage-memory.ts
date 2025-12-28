@@ -18,6 +18,8 @@ async function initializeMockData() {
       id: 1,
       rut: "11.111.111-1",
       password: adminPassword,
+      nombre: "Administrador",
+      rol: "administrador",
       name: "Administrador",
       role: "administrador",
       createdAt: new Date(),
@@ -26,6 +28,8 @@ async function initializeMockData() {
       id: 2,
       rut: "22.222.222-2",
       password: mechanicPassword,
+      nombre: "Juan Pérez",
+      rol: "mecanico",
       name: "Juan Pérez",
       role: "mecanico",
       createdAt: new Date(),
@@ -36,23 +40,31 @@ async function initializeMockData() {
   products = [
     {
       id: 1,
+      nombre: "Pastilla de Freno Toyota Corolla",
+      categoria_id: 1,
+      stock: 50,
+      precio_compra: "15000",
+      precio_venta: "25000",
       partNumber: "BRK-001",
+      quality: "Excelente",
       compatibleBrand: "Toyota",
       compatibleModel: "Corolla",
-      year: 2020,
       provider: "Frenos Chile",
-      stock: 50,
-      quality: "Excellent",
+      disabled: false,
     },
     {
       id: 2,
+      nombre: "Pastilla de Freno Nissan Versa",
+      categoria_id: 1,
+      stock: 30,
+      precio_compra: "12000",
+      precio_venta: "20000",
       partNumber: "BRK-002",
+      quality: "Buena",
       compatibleBrand: "Nissan",
       compatibleModel: "Versa",
-      year: 2019,
       provider: "Auto Parts SA",
-      stock: 30,
-      quality: "Good",
+      disabled: false,
     },
   ];
 
@@ -71,18 +83,20 @@ async function initializeMockData() {
   workOrders = [
     {
       id: 1,
-      otNumber: 1001,
-      patent: "AB-1234",
-      brand: "Toyota",
-      model: "Corolla",
+      usuario_id: 2,
+      fecha: new Date().toISOString().split('T')[0],
+      marca: "Toyota",
+      modelo: "Corolla",
+      patente: "AB-1234",
       km: 50000,
-      entryDate: new Date(),
-      total: 150000,
-      mechanic: "Juan Pérez",
-      supervisor: "Carlos González",
-      clientSignature: "Cliente",
+      total: "150000",
+      correo_cliente: null,
       status: "pending",
-      services: { padReplacement: true, discReplacement: false },
+      otNumber: "1001",
+      patent: "AB-1234",
+      model: "Corolla",
+      brand: "Toyota",
+      entryDate: new Date(),
     },
   ];
 }
@@ -128,6 +142,8 @@ export class MemoryStorage implements IStorage {
     const newUser: User = {
       id: users.length + 1,
       ...user,
+      name: user.name || user.nombre,
+      role: user.role || user.rol,
       createdAt: new Date(),
     };
     users.push(newUser);
@@ -139,9 +155,10 @@ export class MemoryStorage implements IStorage {
     if (search) {
       const searchLower = search.toLowerCase();
       return products.filter(p => 
-        p.partNumber.toLowerCase().includes(searchLower) ||
-        p.compatibleModel.toLowerCase().includes(searchLower) ||
-        p.compatibleBrand.toLowerCase().includes(searchLower)
+        (p.partNumber?.toLowerCase().includes(searchLower)) ||
+        (p.compatibleModel?.toLowerCase().includes(searchLower)) ||
+        (p.compatibleBrand?.toLowerCase().includes(searchLower)) ||
+        (p.nombre?.toLowerCase().includes(searchLower))
       );
     }
     return [...products];
@@ -154,7 +171,17 @@ export class MemoryStorage implements IStorage {
   async createProduct(product: InsertProduct): Promise<Product> {
     const newProduct: Product = {
       id: products.length + 1,
-      ...product,
+      nombre: product.nombre,
+      categoria_id: product.categoria_id,
+      stock: product.stock || 0,
+      precio_compra: product.precio_compra || "0",
+      precio_venta: product.precio_venta || "0",
+      partNumber: (product as any).partNumber || null,
+      quality: (product as any).quality || null,
+      compatibleBrand: (product as any).compatibleBrand || null,
+      compatibleModel: (product as any).compatibleModel || null,
+      provider: (product as any).provider || null,
+      disabled: (product as any).disabled || false,
     };
     products.push(newProduct);
     return newProduct;
@@ -196,8 +223,10 @@ export class MemoryStorage implements IStorage {
     if (search) {
       const searchLower = search.toLowerCase();
       return workOrders.filter(wo =>
-        wo.patent.toLowerCase().includes(searchLower) ||
-        wo.model.toLowerCase().includes(searchLower)
+        (wo.patent?.toLowerCase().includes(searchLower)) ||
+        (wo.patente?.toLowerCase().includes(searchLower)) ||
+        (wo.model?.toLowerCase().includes(searchLower)) ||
+        (wo.modelo?.toLowerCase().includes(searchLower))
       );
     }
     return [...workOrders].sort((a, b) => 
@@ -212,10 +241,20 @@ export class MemoryStorage implements IStorage {
   async createWorkOrder(workOrder: InsertWorkOrder): Promise<WorkOrder> {
     const newOrder: WorkOrder = {
       id: workOrders.length + 1,
-      otNumber: 1000 + workOrders.length + 1,
+      usuario_id: workOrder.usuario_id,
+      fecha: workOrder.fecha,
+      status: workOrder.status || "pending",
+      marca: workOrder.marca || null,
+      modelo: workOrder.modelo || null,
+      patente: workOrder.patente || null,
+      km: workOrder.km || null,
+      total: workOrder.total || "0",
+      correo_cliente: workOrder.correo_cliente || null,
+      otNumber: (workOrder as any).otNumber || String(1000 + workOrders.length + 1),
+      patent: (workOrder as any).patent || workOrder.patente || null,
+      model: (workOrder as any).model || workOrder.modelo || null,
+      brand: (workOrder as any).brand || workOrder.marca || null,
       entryDate: new Date(),
-      status: "pending",
-      ...workOrder,
     };
     workOrders.push(newOrder);
     return newOrder;

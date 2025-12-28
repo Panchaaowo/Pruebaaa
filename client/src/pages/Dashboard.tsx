@@ -17,7 +17,7 @@ export default function Dashboard() {
   const lowStockProducts = products?.filter(p => p.stock < 5) || [];
   const pendingOrders = workOrders?.filter(w => w.status === 'pending').length || 0;
   const completedOrders = workOrders?.filter(w => w.status === 'completed').length || 0;
-  const totalRevenue = workOrders?.reduce((sum, wo) => sum + (wo.total || 0), 0) || 0;
+  const totalRevenue = workOrders?.reduce((sum, wo) => sum + (parseFloat(wo.total?.toString() || "0") || 0), 0) || 0;
 
   // Servicios más realizados (simulado)
   const topServices = [

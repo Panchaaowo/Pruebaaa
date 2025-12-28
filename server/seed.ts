@@ -15,6 +15,8 @@ async function seed() {
       await storage.createUser({
         rut: adminRut,
         password: hashedPassword,
+        nombre: "Administrador",
+        rol: "administrador",
         name: "Administrador",
         role: "administrador",
       });
@@ -35,6 +37,8 @@ async function seed() {
       await storage.createUser({
         rut: mechanicRut,
         password: hashedPassword,
+        nombre: "Juan Pérez",
+        rol: "mecanico",
         name: "Juan Pérez",
         role: "mecanico",
       });

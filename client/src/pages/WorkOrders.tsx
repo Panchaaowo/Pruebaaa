@@ -103,6 +103,8 @@ const SERVICE_OPTIONS = [
 
 function CreateWorkOrderDialog() {
   const [open, setOpen] = useState(false);
+  const [productSearch, setProductSearch] = useState("");
+  const [showProductSuggestions, setShowProductSuggestions] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
   const [servicePrices, setServicePrices] = useState<{[key: string]: number}>({});
   const { mutate: createWorkOrder, isPending } = useCreateWorkOrder();
@@ -157,6 +159,29 @@ function CreateWorkOrderDialog() {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-2">
+            
+            {/* Número de OT Manual */}
+            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <FormField
+                control={form.control}
+                name="otNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium">Orden de Trabajo N°</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        placeholder="Ingrese el número de la orden de papel" 
+                        className="font-mono text-lg font-bold"
+                        onChange={e => field.onChange(parseInt(e.target.value) || 0)}
+                      />
+                    </FormControl>
+                    <p className="text-xs text-blue-700">Ingrese el número que aparece en la orden física</p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             
             {/* Vehicle Info */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-lg border">
@@ -261,11 +286,94 @@ function CreateWorkOrderDialog() {
                 </Badge>
               </div>
               
+              {/* Buscador de productos */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar producto por código, nombre o modelo..."
+                  className="pl-9"
+                  value={productSearch}
+                  onChange={(e) => {
+                    setProductSearch(e.target.value);
+                    setShowProductSuggestions(e.target.value.length >= 2);
+                  }}
+                  onFocus={() => productSearch.length >= 2 && setShowProductSuggestions(true)}
+                />
+                
+                {/* Sugerencias de productos */}
+                {showProductSuggestions && productSearch.length >= 2 && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-80 overflow-y-auto">
+                    {products
+                      ?.filter(p => {
+                        const search = productSearch.toLowerCase();
+                        return (
+                          p.partNumber?.toLowerCase().includes(search) ||
+                          p.nombre?.toLowerCase().includes(search) ||
+                          p.compatibleBrand?.toLowerCase().includes(search) ||
+                          p.compatibleModel?.toLowerCase().includes(search)
+                        );
+                      })
+                      .map(product => (
+                        <button
+                          key={product.id}
+                          type="button"
+                          className="w-full px-4 py-3 text-left hover:bg-slate-50 border-b last:border-b-0 transition-colors"
+                          onClick={() => {
+                            const existing = selectedProducts.find(p => p.id === product.id);
+                            if (existing) {
+                              setSelectedProducts(
+                                selectedProducts.map(p => 
+                                  p.id === product.id 
+                                    ? { ...p, quantity: (p as any).quantity + 1 }
+                                    : p
+                                )
+                              );
+                            } else {
+                              setSelectedProducts([...selectedProducts, { ...product, quantity: 1 } as any]);
+                            }
+                            setProductSearch("");
+                            setShowProductSuggestions(false);
+                          }}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="font-medium text-sm">{product.partNumber}</div>
+                              <div className="text-xs text-slate-600">{product.nombre}</div>
+                              <div className="text-xs text-slate-500">
+                                {product.compatibleBrand} {product.compatibleModel}
+                                {product.quality && ` • ${product.quality}`}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <Badge variant={product.stock > 10 ? "default" : "destructive"} className="text-xs">
+                                Stock: {product.stock}
+                              </Badge>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    {products?.filter(p => {
+                      const search = productSearch.toLowerCase();
+                      return (
+                        p.partNumber?.toLowerCase().includes(search) ||
+                        p.nombre?.toLowerCase().includes(search) ||
+                        p.compatibleBrand?.toLowerCase().includes(search) ||
+                        p.compatibleModel?.toLowerCase().includes(search)
+                      );
+                    }).length === 0 && (
+                      <div className="px-4 py-8 text-center text-sm text-slate-500">
+                        No se encontraron productos
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              
               {selectedProducts.length === 0 ? (
                 <Alert>
                   <Package className="h-4 w-4" />
                   <AlertDescription>
-                    Selecciona los productos utilizados en este servicio. El stock se descontará automáticamente.
+                    Busca y selecciona los productos utilizados en este servicio. El stock se descontará automáticamente.
                   </AlertDescription>
                 </Alert>
               ) : (
@@ -276,12 +384,52 @@ function CreateWorkOrderDialog() {
                         <Package className="w-4 h-4 text-green-600" />
                         <div>
                           <p className="font-medium text-sm">{product.partNumber}</p>
-                          <p className="text-xs text-muted-foreground">{product.compatibleBrand} - Stock: {product.stock}</p>
+                          <p className="text-xs text-muted-foreground">{product.compatibleBrand} - {product.quality} - Stock: {product.stock}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="bg-red-100 text-red-700">
-                          -1 unidad
+                      <div className="flex items-center gap-3">
+                        {/* Contador tipo POS */}
+                        <div className="flex items-center gap-1 bg-white rounded-lg border-2 border-slate-300">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+                            onClick={() => {
+                              const current = (product as any).quantity || 1;
+                              if (current > 1) {
+                                setSelectedProducts(selectedProducts.map(p => 
+                                  p.id === product.id ? {...p, quantity: current - 1} : p
+                                ));
+                              }
+                            }}
+                          >
+                            <span className="text-lg font-bold">−</span>
+                          </Button>
+                          <div className="w-12 text-center">
+                            <span className="font-mono font-bold text-lg">
+                              {(product as any).quantity || 1}
+                            </span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
+                            onClick={() => {
+                              const current = (product as any).quantity || 1;
+                              if (current < product.stock) {
+                                setSelectedProducts(selectedProducts.map(p => 
+                                  p.id === product.id ? {...p, quantity: current + 1} : p
+                                ));
+                              }
+                            }}
+                          >
+                            <span className="text-lg font-bold">+</span>
+                          </Button>
+                        </div>
+                        <Badge variant="secondary" className="bg-red-100 text-red-700 font-mono">
+                          -{(product as any).quantity || 1} u.
                         </Badge>
                         <Button 
                           type="button"

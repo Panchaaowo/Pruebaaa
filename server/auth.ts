@@ -45,7 +45,7 @@ export function setupAuth(app: Express) {
             return done(null, false, { message: "RUT o contraseña incorrectos" });
           }
 
-          return done(null, user);
+          return done(null, user as any);
         } catch (error) {
           return done(error);
         }
@@ -62,7 +62,7 @@ export function setupAuth(app: Express) {
   passport.deserializeUser(async (id: number, done) => {
     try {
       const user = await storage.getUserById(id);
-      done(null, user);
+      done(null, user as any);
     } catch (error) {
       done(error);
     }

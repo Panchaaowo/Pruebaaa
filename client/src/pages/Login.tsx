@@ -2,10 +2,7 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Wrench, Lock } from "lucide-react";
 
 export default function Login() {
   const [rut, setRut] = useState("");
@@ -18,19 +15,11 @@ export default function Login() {
   };
 
   const formatRut = (value: string) => {
-    // Remove all non-numeric characters except 'k' or 'K'
     const cleanRut = value.replace(/[^0-9kK]/g, "");
-    
     if (cleanRut.length === 0) return "";
-    
-    // Separate the verification digit
     const body = cleanRut.slice(0, -1);
     const verifier = cleanRut.slice(-1);
-    
-    // Format the body with dots
     const formattedBody = body.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-    
-    // Return formatted RUT
     return formattedBody + (verifier ? "-" + verifier : "");
   };
 
@@ -40,75 +29,73 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
-      <Card className="w-full max-w-md shadow-2xl">
-        <CardHeader className="space-y-3 text-center">
-          <div className="flex justify-center mb-2">
-            <div className="p-3 bg-primary rounded-full">
-              <Wrench className="w-8 h-8 text-primary-foreground" />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <div className="w-full max-w-md">
+        {/* Logo y Header */}
+        <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-700 rounded-t-2xl p-12 text-center">
+          <div className="flex justify-center mb-6">
+            <div className="w-20 h-20 bg-red-600 rounded-xl flex items-center justify-center shadow-xl">
+              <span className="text-4xl font-black text-white">FA</span>
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">Frenos Aguilera</CardTitle>
-          <CardDescription>
-            Ingresa tu RUT y contraseña para acceder
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <h1 className="text-4xl font-black text-white tracking-wider mb-2">
+            FRENOS AGUILERA
+          </h1>
+          <p className="text-slate-400 text-sm">Sistema de Gestión de Taller</p>
+        </div>
+
+        {/* Formulario */}
+        <div className="bg-slate-900/50 backdrop-blur-sm border-x border-slate-700 p-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="rut">RUT</Label>
+              <label className="text-sm font-medium text-white">RUT / Usuario</label>
               <Input
-                id="rut"
                 type="text"
                 placeholder="12.345.678-9"
                 value={rut}
                 onChange={handleRutChange}
                 required
                 disabled={isLoggingIn}
-                className="text-base"
+                className="bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-500 focus-visible:border-slate-500 focus-visible:ring-0 focus-visible:ring-offset-0 h-12 text-base"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="password">Contraseña</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={isLoggingIn}
-                  className="pl-10 text-base"
-                />
-              </div>
+              <label className="text-sm font-medium text-white">Contraseña</label>
+              <Input
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={isLoggingIn}
+                className="bg-slate-800/50 border-slate-600 text-white placeholder:text-slate-500 focus-visible:border-slate-500 focus-visible:ring-0 focus-visible:ring-offset-0 h-12 text-base"
+              />
             </div>
 
             {loginError && (
-              <Alert variant="destructive">
+              <Alert variant="destructive" className="bg-red-900/20 border-red-600/50 text-red-200">
                 <AlertDescription>{loginError}</AlertDescription>
               </Alert>
             )}
 
             <Button
               type="submit"
-              className="w-full"
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-bold h-12 text-base shadow-lg shadow-red-600/20"
               disabled={isLoggingIn}
             >
-              {isLoggingIn ? "Iniciando sesión..." : "Iniciar Sesión"}
+              {isLoggingIn ? "VERIFICANDO..." : "INGRESAR AL SISTEMA"}
             </Button>
           </form>
+        </div>
 
-          <div className="mt-6 pt-6 border-t text-center text-sm text-muted-foreground">
-            <p>Roles disponibles:</p>
-            <p className="mt-1">
-              <span className="font-medium">Mecánico</span> · <span className="font-medium">Administrador</span>
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+        {/* Footer */}
+        <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-700 rounded-b-2xl p-4 text-center">
+          <p className="text-xs text-slate-400">
+            ACCESO EXCLUSIVO PERSONAL AUTORIZADO
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
