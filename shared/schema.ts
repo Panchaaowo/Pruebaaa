@@ -2,6 +2,16 @@ import { pgTable, text, serial, integer, boolean, timestamp, json, varchar } fro
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Users table for authentication
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  rut: text("rut").notNull().unique(),
+  password: text("password").notNull(), // Hashed password
+  name: text("name").notNull(),
+  role: text("role").notNull(), // "mecanico" or "administrador"
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const products = pgTable("products", {
   id: serial("id").primaryKey(),
   partNumber: text("part_number").notNull(),
@@ -38,11 +48,20 @@ export const workOrders = pgTable("work_orders", {
 });
 
 // Schemas
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
+export const loginSchema = z.object({
+  rut: z.string().min(1, "RUT es requerido"),
+  password: z.string().min(1, "Contraseña es requerida"),
+});
+
 export const insertProductSchema = createInsertSchema(products).omit({ id: true });
 export const insertPurchaseSchema = createInsertSchema(purchases).omit({ id: true, date: true });
 export const insertWorkOrderSchema = createInsertSchema(workOrders).omit({ id: true, otNumber: true, entryDate: true });
 
 // Types
+export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+
 export type Product = typeof products.$inferSelect;
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 

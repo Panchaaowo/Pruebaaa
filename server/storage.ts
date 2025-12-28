@@ -1,12 +1,17 @@
 import { db } from "./db";
 import {
-  products, purchases, workOrders,
-  type InsertProduct, type InsertPurchase, type InsertWorkOrder,
-  type Product, type Purchase, type WorkOrder
+  products, purchases, workOrders, users,
+  type InsertProduct, type InsertPurchase, type InsertWorkOrder, type InsertUser,
+  type Product, type Purchase, type WorkOrder, type User
 } from "@shared/schema";
 import { eq, ilike, desc, or } from "drizzle-orm";
 
 export interface IStorage {
+  // Users
+  getUserByRut(rut: string): Promise<User | undefined>;
+  getUserById(id: number): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  
   // Products
   getProducts(search?: string): Promise<Product[]>;
   getProduct(id: number): Promise<Product | undefined>;
@@ -27,6 +32,22 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // Users
+  async getUserByRut(rut: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.rut, rut));
+    return user;
+  }
+
+  async getUserById(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const [newUser] = await db.insert(users).values(user).returning();
+    return newUser;
+  }
+
   // Products
   async getProducts(search?: string): Promise<Product[]> {
     if (search) {

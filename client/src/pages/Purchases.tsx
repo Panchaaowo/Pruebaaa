@@ -179,6 +179,7 @@ function CreatePurchaseDialog() {
                     <Input 
                       type="number" 
                       min="1"
+                      className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       {...form.register(`items.${index}.quantity` as any, { valueAsNumber: true })} 
                     />
                   </div>
@@ -188,6 +189,7 @@ function CreatePurchaseDialog() {
                     <Input 
                       type="number" 
                       min="0"
+                      className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       {...form.register(`items.${index}.cost` as any, { valueAsNumber: true })} 
                     />
                   </div>

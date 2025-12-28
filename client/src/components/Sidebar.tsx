@@ -1,11 +1,14 @@
 import { Link, useLocation } from "wouter";
-import { Package, ShoppingCart, ClipboardList, Wrench, Menu } from "lucide-react";
+import { Package, ShoppingCart, ClipboardList, Wrench, Menu, LogOut, User, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 import { useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
+import { Badge } from "./ui/badge";
 
 const links = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/inventory", label: "Inventario", icon: Package },
   { href: "/purchases", label: "Compras", icon: ShoppingCart },
   { href: "/work-orders", label: "Órdenes de Trabajo", icon: ClipboardList },
@@ -14,6 +17,7 @@ const links = [
 export function Sidebar() {
   const [location] = useLocation();
   const [open, setOpen] = useState(false);
+  const { user, logout } = useAuth();
 
   const NavContent = () => (
     <div className="flex flex-col h-full bg-slate-900 text-white shadow-2xl">
@@ -22,8 +26,8 @@ export function Sidebar() {
           <Wrench className="w-6 h-6" />
         </div>
         <div>
-          <h1 className="text-xl font-display font-bold tracking-wider">AUTO<span className="text-primary">MEC</span></h1>
-          <p className="text-xs text-slate-400 font-body">Management System</p>
+          <h1 className="text-xl font-display font-bold tracking-wider">FRENOS<span className="text-primary"> AGUILERA</span></h1>
+          <p className="text-xs text-slate-400 font-body">Sistema de Gestión</p>
         </div>
       </div>
       
@@ -53,14 +57,35 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="p-4 border-t border-slate-800">
+      <div className="p-4 border-t border-slate-800 space-y-3">
+        {/* User Info */}
         <div className="bg-slate-800/50 rounded-xl p-4">
-          <p className="text-xs text-slate-400 uppercase tracking-wider font-bold mb-1">Status</p>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-500" />
-            <span className="text-sm text-slate-300">System Online</span>
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+              <User className="w-5 h-5 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">{user?.name}</p>
+              <p className="text-xs text-slate-400 truncate">{user?.rut}</p>
+              <Badge 
+                variant={user?.role === "administrador" ? "default" : "secondary"}
+                className="mt-2 text-xs"
+              >
+                {user?.role === "administrador" ? "Administrador" : "Mecánico"}
+              </Badge>
+            </div>
           </div>
         </div>
+
+        {/* Logout Button */}
+        <Button
+          variant="outline"
+          className="w-full justify-start gap-2 text-slate-400 hover:text-white hover:bg-slate-800 border-slate-700"
+          onClick={() => logout()}
+        >
+          <LogOut className="w-4 h-4" />
+          Cerrar Sesión
+        </Button>
       </div>
     </div>
   );

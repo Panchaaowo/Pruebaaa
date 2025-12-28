@@ -1,22 +1,102 @@
 import type { Express } from "express";
 import type { Server } from "http";
-import { storage } from "./storage";
+import { storage } from "./storage-memory";
 import { api } from "@shared/routes";
 import { z } from "zod";
+import passport from "passport";
+import bcrypt from "bcryptjs";
+import { isAuthenticated, isAdmin, isMechanic } from "./auth";
+import { loginSchema } from "@shared/schema";
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
 
-  // Products
-  app.get(api.products.list.path, async (req, res) => {
+  // Authentication routes
+  app.post("/api/auth/login", (req, res, next) => {
+    try {
+      const { rut, password } = loginSchema.parse(req.body);
+      
+      passport.authenticate("local", (err: any, user: any, info: any) => {
+        if (err) {
+          return next(err);
+        }
+        
+        if (!user) {
+          return res.status(401).json({ message: info?.message || "Credenciales inválidas" });
+        }
+        
+        req.login(user, (err) => {
+          if (err) {
+            return next(err);
+          }
+          
+          // Don't send password to client
+          const { password, ...userWithoutPassword } = user;
+          return res.json(userWithoutPassword);
+        });
+      })(req, res, next);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        res.status(400).json({ message: err.errors[0].message });
+      } else {
+        next(err);
+      }
+    }
+  });
+
+  app.post("/api/auth/logout", (req, res) => {
+    req.logout((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Error al cerrar sesión" });
+      }
+      res.json({ message: "Sesión cerrada exitosamente" });
+    });
+  });
+
+  app.get("/api/auth/me", isAuthenticated, (req, res) => {
+    const { password, ...userWithoutPassword } = req.user as any;
+    res.json(userWithoutPassword);
+  });
+
+  // Register route (only for admin, or you can remove this if you want to manually create users)
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const { rut, password, name, role } = req.body;
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByRut(rut);
+      if (existingUser) {
+        return res.status(400).json({ message: "El RUT ya está registrado" });
+      }
+      
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+      
+      // Create user
+      const newUser = await storage.createUser({
+        rut,
+        password: hashedPassword,
+        name,
+        role: role || "mecanico",
+      });
+      
+      const { password: _, ...userWithoutPassword } = newUser;
+      res.status(201).json(userWithoutPassword);
+    } catch (err) {
+      res.status(500).json({ message: "Error al registrar usuario" });
+    }
+  });
+
+  // Products - Protected routes
+  app.get(api.products.list.path, isAuthenticated, async (req, res) => {
     const search = req.query.search as string | undefined;
     const products = await storage.getProducts(search);
     res.json(products);
   });
 
-  app.post(api.products.create.path, async (req, res) => {
+  app.post(api.products.create.path, isAdmin, async (req, res) => {
     try {
       const input = api.products.create.input.parse(req.body);
       const product = await storage.createProduct(input);
@@ -33,7 +113,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put(api.products.update.path, async (req, res) => {
+  app.put(api.products.update.path, isAdmin, async (req, res) => {
     try {
       const id = Number(req.params.id);
       const input = api.products.update.input.parse(req.body);
@@ -51,19 +131,19 @@ export async function registerRoutes(
     }
   });
 
-  app.delete(api.products.delete.path, async (req, res) => {
+  app.delete(api.products.delete.path, isAdmin, async (req, res) => {
     const id = Number(req.params.id);
     await storage.deleteProduct(id);
     res.status(204).send();
   });
 
   // Purchases
-  app.get(api.purchases.list.path, async (req, res) => {
+  app.get(api.purchases.list.path, isAuthenticated, async (req, res) => {
     const purchases = await storage.getPurchases();
     res.json(purchases);
   });
 
-  app.post(api.purchases.create.path, async (req, res) => {
+  app.post(api.purchases.create.path, isAdmin, async (req, res) => {
     try {
       const input = api.purchases.create.input.parse(req.body);
       const purchase = await storage.createPurchase(input);
@@ -81,13 +161,13 @@ export async function registerRoutes(
   });
 
   // Work Orders
-  app.get(api.workOrders.list.path, async (req, res) => {
+  app.get(api.workOrders.list.path, isAuthenticated, async (req, res) => {
     const search = req.query.search as string | undefined;
     const orders = await storage.getWorkOrders(search);
     res.json(orders);
   });
 
-  app.post(api.workOrders.create.path, async (req, res) => {
+  app.post(api.workOrders.create.path, isMechanic, async (req, res) => {
     try {
       const input = api.workOrders.create.input.parse(req.body);
       const order = await storage.createWorkOrder(input);
@@ -104,7 +184,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put(api.workOrders.update.path, async (req, res) => {
+  app.put(api.workOrders.update.path, isMechanic, async (req, res) => {
     try {
       const id = Number(req.params.id);
       const input = api.workOrders.update.input.parse(req.body);
@@ -122,7 +202,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete(api.workOrders.delete.path, async (req, res) => {
+  app.delete(api.workOrders.delete.path, isAdmin, async (req, res) => {
     const id = Number(req.params.id);
     await storage.deleteWorkOrder(id);
     res.status(204).send();
